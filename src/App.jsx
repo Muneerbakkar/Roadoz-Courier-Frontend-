@@ -1,0 +1,84 @@
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Login } from "./pages/Login";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { Profile } from "./pages/Profile";
+import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { Dashboard } from "./pages/Dashboard";
+import NewOrder from "./pages/NewOrder";
+import { ProcessingOrders } from "./pages/ProcessingOrders";
+import { ServiceablePincode } from "./pages/ServiceablePincode";
+import { RateCalculator } from "./pages/RateCalculator";
+import { ChannelIntegration } from "./pages/ChannelIntegration";
+import { Wallet } from "./pages/Wallet";
+import { CODRemittance } from "./pages/CODRemittance";
+import { Invoices } from "./pages/Invoices";
+import { Consignees } from "./pages/Consignees";
+import { Tickets } from "./pages/Tickets";
+import { Reports } from "./pages/Reports";
+import { ChangePassword } from "./pages/ChangePassword";
+import { PickupAddress } from "./pages/PickupAddress";
+import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { NotFound } from "./pages/NotFound";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { GeneralDetails } from "./pages/GeneralDetails";
+import { RTOAddress } from "./pages/RTOAddress";
+import { LabelSetting } from "./pages/LabelSetting";
+import { KYC } from "./pages/KYC";
+import { Permissions } from "./pages/admin/Permissions";
+import { Roles } from "./pages/admin/Roles";
+import { Users } from "./pages/admin/Users";
+import { Franchise } from "./pages/Franchise";
+
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="new-orders" element={<NewOrder />} />
+            <Route path="processing-order" element={<ProcessingOrders />} />
+            <Route path="all-orders" element={<ProcessingOrders />} />
+            <Route path="manifested" element={<ProcessingOrders />} />
+            <Route path="not-picked" element={<ProcessingOrders />} />
+            <Route path="in-transit" element={<ProcessingOrders />} />
+            <Route path="pending" element={<ProcessingOrders />} />
+            <Route path="out-for-delivery" element={<ProcessingOrders />} />
+            <Route path="delivered" element={<ProcessingOrders />} />
+            <Route path="rto-in-transit" element={<ProcessingOrders />} />
+            <Route path="rto-delivered" element={<ProcessingOrders />} />
+            <Route path="lost" element={<ProcessingOrders />} />
+            <Route path="cancelled" element={<ProcessingOrders />} />
+            <Route path="returned" element={<ProcessingOrders />} />
+            <Route path="returned" element={<ProcessingOrders />} />
+            <Route path="cancelled" element={<ProcessingOrders />} />
+            <Route path="serviceable-pincode" element={<ServiceablePincode />} />
+            <Route path="rate-calculator" element={<RateCalculator />} />
+            <Route path="channel-integration" element={<ChannelIntegration />} />
+            <Route path="wallet" element={<Wallet />} />
+            <Route path="cod-remittance" element={<CODRemittance />} />
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="consignees" element={<Consignees />} />
+            <Route path="tickets" element={<Tickets />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="settings/general" element={<GeneralDetails />} />
+            <Route path="settings/password" element={<ChangePassword />} />
+            <Route path="settings/pickup" element={<PickupAddress />} />
+            <Route path="settings/rto" element={<RTOAddress />} />
+            <Route path="settings/label" element={<LabelSetting />} />
+            <Route path="settings/kyc" element={<KYC />} />
+            <Route path="/admin/modules" element={<Permissions/>} />
+            <Route path="/admin/roles" element={<Roles/>} />
+            <Route path="/admin/users" element={<Users/>} />
+            <Route path="/franchise" element={<Franchise/>} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+    </ThemeProvider>
+  );
+}
