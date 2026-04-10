@@ -28,6 +28,8 @@ import { Permissions } from "./pages/admin/Permissions";
 import { Roles } from "./pages/admin/Roles";
 import { Users } from "./pages/admin/Users";
 import { Franchise } from "./pages/Franchise";
+import StaffRegistration from "./pages/StaffRegistration";
+import FranchiseWizard from "./components/common/FranchiseWizard";
 
 
 export default function App() {
@@ -75,6 +77,10 @@ export default function App() {
             <Route path="/admin/roles" element={<Roles/>} />
             <Route path="/admin/users" element={<Users/>} />
             <Route path="/franchise" element={<Franchise/>} />
+            <Route path="/franchise/add-staff" element={<StaffRegistration />} />
+            <Route path="/franchise/edit-staff/:id" element={<StaffRegistration />} />
+            <Route path="/franchise/add" element={<FranchiseWizard />} />
+            <Route path="/franchise/edit/:id" element={<FranchiseWizard />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
