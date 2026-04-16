@@ -25,7 +25,6 @@ export default function FranchiseDetailsModal({ isOpen, onClose, data }) {
     <CommonModal isOpen={isOpen} onClose={onClose} title={`Profile: ${data.code}`}>
       <div className="space-y-6">
         
-        {/* Header Branding */}
         <div className="bg-dashboard-bg p-6 rounded-2xl border border-border-subtle flex items-center justify-between">
            <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-primary text-black flex items-center justify-center rounded-xl text-xl font-black">
