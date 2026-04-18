@@ -1,57 +1,61 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Hash, ShieldCheck } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { Eye, EyeOff, Lock, Mail, ArrowLeft, Hash, ShieldCheck, AlertCircle } from "lucide-react";
 import Logo from "../assets/images/Roadoz Golden hd.png";
 import { Button } from "../components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { loginUser } from "../redux/authSlice";
 
 export function Login() {
   const navigate = useNavigate();
-
+  const dispatch = useDispatch();
+  
+  const { loading, error, role, isAuthenticated } = useSelector((state) => state.auth);
 
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    email: "testuser@gmail.com",
-    password: "password123",
-    franchiseCode: "sree@679339"
+    email: "",
+    password: "",
+    franchiseCode: ""
   });
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFirstStep = (e) => {
+  const handleFirstStep = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    
+    const payload = {
+      email: formData.email,
+      password: formData.password
+    };
 
-
-    setTimeout(() => {
-      setLoading(false);
-      if (formData.email === "admin@roadoz.com") {
-        localStorage.setItem("isAuth", "true");
+    const resultAction = await dispatch(loginUser(payload));
+    
+    if (loginUser.fulfilled.match(resultAction)) {
+      const userRole = resultAction.payload.role;
+      
+      if (userRole === "super_admin") {
         navigate("/dashboard");
       } else {
         setStep(2);
       }
-    }, 1000);
+    }
   };
 
   const handleFinalStep = (e) => {
     e.preventDefault();
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      localStorage.setItem("isAuth", "true");
+    if (formData.franchiseCode.length > 3) {
       navigate("/dashboard");
-    }, 1000);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-dashboard-bg flex flex-col items-center justify-center p-4 transition-colors duration-300">
+    <div className="min-h-screen bg-dashboard-bg flex flex-col items-center justify-center p-4">
       <div className="mb-10 text-center">
         <img src={Logo} alt="Roadoz Logo" className="h-16 w-auto mx-auto mb-4 object-contain" />
         <h1 className="text-2xl font-bold text-text-main tracking-tight italic">
@@ -74,6 +78,13 @@ export function Login() {
                 <p className="text-text-muted font-medium italic">Enter your credentials to continue</p>
               </div>
 
+              {error && (
+                <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-500 text-sm">
+                  <AlertCircle size={18} />
+                  <span>{error}</span>
+                </div>
+              )}
+
               <form onSubmit={handleFirstStep} className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider block">Email Address</label>
@@ -84,8 +95,8 @@ export function Login() {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full bg-dashboard-bg border border-border-subtle rounded-xl pl-12 pr-4 py-4 text-text-main focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                      placeholder="name@company.com"
+                      className="w-full bg-dashboard-bg border border-border-subtle rounded-xl pl-12 pr-4 py-4 text-text-main focus:border-primary outline-none transition-all"
+                      placeholder="admin@example.com"
                       required
                     />
                   </div>
@@ -103,7 +114,7 @@ export function Login() {
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="w-full bg-dashboard-bg border border-border-subtle rounded-xl pl-12 pr-12 py-4 text-text-main focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                      className="w-full bg-dashboard-bg border border-border-subtle rounded-xl pl-12 pr-12 py-4 text-text-main focus:border-primary outline-none transition-all"
                       placeholder="••••••••"
                       required
                     />
@@ -151,26 +162,22 @@ export function Login() {
                       name="franchiseCode"
                       value={formData.franchiseCode}
                       onChange={handleInputChange}
-                      className="w-full bg-dashboard-bg border border-border-subtle rounded-xl pl-12 pr-4 py-4 text-text-main focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-text-muted"
-                      placeholder="Enter 6-digit code"
+                      className="w-full bg-dashboard-bg border border-border-subtle rounded-xl pl-12 pr-4 py-4 text-text-main focus:border-primary outline-none transition-all"
+                      placeholder="Enter franchise code"
                       required
                       autoFocus
                     />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full bg-primary text-black font-bold py-7 rounded-xl shadow-lg hover:bg-primary/90 text-base uppercase tracking-widest">
-                  {loading ? "Verifying..." : "Verify & Enter"}
+                <Button type="submit" className="w-full bg-primary text-black font-bold py-7 rounded-xl shadow-lg hover:bg-primary/90 text-base uppercase tracking-widest">
+                  Verify & Enter
                 </Button>
               </form>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      <p className="mt-8 text-text-muted text-xs font-bold uppercase tracking-widest opacity-50">
-        © 2026 Roadoz Logistics. All rights reserved.
-      </p>
     </div>
   );
 }

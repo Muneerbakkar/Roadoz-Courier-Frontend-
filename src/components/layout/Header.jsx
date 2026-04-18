@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import { useSelector } from "react-redux"; // Added for Redux integration
 import {
   Menu, Bell, Search, Moon, Sun, Plus, Zap,
   Maximize, X, ShoppingBag, List, Calculator,
-  FileText, History, Copy, Download, QrCode, ChevronDown
+  FileText, History, Copy, Download, QrCode, ChevronDown, User
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useTheme } from "../../contexts/ThemeContext";
@@ -11,8 +12,13 @@ import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
+const IMAGE_BASE_URL = "http://api.roadozcourier.com";
+
 export function Header({ toggleSidebar }) {
   const { theme, toggleTheme } = useTheme();
+  
+  const { user } = useSelector((state) => state.profile);
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -33,12 +39,10 @@ export function Header({ toggleSidebar }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-    }
+  const getProfileImageUrl = () => {
+    if (!user?.profile_image) return null;
+    if (user.profile_image.startsWith('http')) return user.profile_image;
+    return `${IMAGE_BASE_URL}${user.profile_image}`;
   };
 
   const quickActions = [
@@ -144,30 +148,45 @@ export function Header({ toggleSidebar }) {
             aria-label="Toggle Theme"
           >
             {theme === "dark" ? (
-              <Sun size={20} className="transition-transform duration-300 rotate-0" />
+              <Sun size={20} />
             ) : (
-              <Moon size={20} className="transition-transform duration-300 rotate-0" />
+              <Moon size={20} />
             )}
           </button>
 
           <Link to="/profile" className="flex-shrink-0">
-            <div className="flex items-center gap-2 pl-2 border-l border-border-subtle cursor-pointer hover:bg-primary/10 px-1 md:px-2 py-1 rounded-lg transition">
+            <div className="flex items-center gap-2 pl-2 border-l border-border-subtle cursor-pointer hover:bg-primary/5 px-1 md:px-2 py-1 rounded-lg transition">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
-                <img src={Logo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                {getProfileImageUrl() ? (
+                    <img 
+                        src={getProfileImageUrl()} 
+                        alt="User Avatar" 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer" 
+                    />
+                ) : (
+                    <User size={16} className="text-primary" />
+                )}
               </div>
-              <span className="text-xs md:text-sm font-bold text-text-main hidden md:block">web-info tech</span>
-              <ChevronDown size={14} className="text-text-muted hidden md:block" />
+              <div className="flex flex-col items-start leading-none hidden md:flex">
+                <span className="text-xs md:text-[13px] font-bold text-text-main capitalize">
+                    {user?.name || "Loading..."}
+                </span>
+                <span className="text-[10px] text-text-muted mt-0.5 uppercase tracking-tighter">
+                    {user?.role?.replace('_', ' ') || "Administrator"}
+                </span>
+              </div>
+              <ChevronDown size={14} className="text-text-muted hidden md:block ml-1" />
             </div>
           </Link>
         </div>
       </header>
 
+      {/* Modals and Overlays */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
             className="bg-card-bg border-b border-border-subtle p-4 overflow-hidden"
           >
             <div className="max-w-3xl mx-auto relative">
@@ -241,7 +260,7 @@ export function Header({ toggleSidebar }) {
                   <span className="text-[10px] uppercase font-bold opacity-30 tracking-widest">QR</span>
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-text-main">web-info tech</p>
+                  <p className="text-sm font-bold text-text-main capitalize">{user?.name || 'web-info tech'}</p>
                   <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
                     <span className="text-xs text-text-muted">UPI ID: <span className="font-bold">roadoz@upi</span></span>
                     <button className="bg-dashboard-bg border border-border-subtle px-3 py-1 rounded text-[10px] font-bold hover:bg-primary/10 transition-colors flex items-center gap-1"><Copy size={10} /> Copy</button>

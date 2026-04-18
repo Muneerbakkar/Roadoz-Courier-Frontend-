@@ -12,8 +12,9 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@reduxjs/toolkit": "^2.11.2",
     "@vitejs/plugin-react": "^5.0.4",
-    "axios": "^1.14.0",
+    "axios": "^1.15.0",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
@@ -25,6 +26,7 @@
     "motion": "^12.38.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.0",
     "sweetalert2": "^11.26.24",
