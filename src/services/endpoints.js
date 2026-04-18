@@ -1,4 +1,6 @@
-
-export const BaseUrl = process.env.REACT_APP_BASE_URL || "http://localhost:8080/";
-
-export const LoginEndpoint = `${BaseUrl}api/auth/login`;
+export const ENDPOINTS = {
+  LOGIN: "/auth/login",
+  PROFILE: "/profile",
+  UPLOAD_IMAGE: "/profile/upload-image",
+  PROFILE_IMAGE: "/profile/image",
+};
