@@ -3,7 +3,9 @@ import {
   getProfileApi,
   getProfileImageApi,
   updateProfileApi,
-  uploadProfileImageApi
+  uploadProfileImageApi,
+  changePasswordRequestApi,
+  changePasswordVerifyApi,
 } from "../services/apiCalls";
 
 export const fetchProfile = createAsyncThunk(
@@ -12,17 +14,19 @@ export const fetchProfile = createAsyncThunk(
     try {
       const [profileData, imageData] = await Promise.all([
         getProfileApi(),
-        getProfileImageApi()
+        getProfileImageApi(),
       ]);
 
       return {
         ...profileData,
-        profile_image: imageData?.profile_image || profileData.profile_image
+        profile_image: imageData?.profile_image || profileData.profile_image,
       };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to fetch profile");
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch profile",
+      );
     }
-  }
+  },
 );
 
 export const updateProfile = createAsyncThunk(
@@ -30,11 +34,11 @@ export const updateProfile = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await updateProfileApi(userData);
-      return response; 
+      return response;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Update failed");
     }
-  }
+  },
 );
 
 export const uploadProfileImage = createAsyncThunk(
@@ -42,11 +46,37 @@ export const uploadProfileImage = createAsyncThunk(
   async (formData, { rejectWithValue }) => {
     try {
       const response = await uploadProfileImageApi(formData);
-      return response; 
+      return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Image upload failed");
+      return rejectWithValue(
+        error.response?.data?.message || "Image upload failed",
+      );
     }
-  }
+  },
+);
+
+export const changePasswordRequest = createAsyncThunk(
+  "profile/changePasswordRequest",
+  async (data, { rejectWithValue }) => {
+    try {
+      return await changePasswordRequestApi(data);
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Request failed");
+    }
+  },
+);
+
+export const changePasswordVerify = createAsyncThunk(
+  "profile/changePasswordVerify",
+  async (data, { rejectWithValue }) => {
+    try {
+      return await changePasswordVerifyApi(data);
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Verification failed",
+      );
+    }
+  },
 );
 
 const profileSlice = createSlice({
@@ -55,12 +85,14 @@ const profileSlice = createSlice({
     user: null,
     loading: false,
     error: null,
+    passwordLoading: false,
+    otpLoading: false,
   },
   reducers: {
     clearProfile: (state) => {
       state.user = null;
       state.error = null;
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -85,6 +117,27 @@ const profileSlice = createSlice({
         if (state.user) {
           state.user.profile_image = action.payload.profile_image;
         }
+      })
+      .addCase(changePasswordRequest.pending, (state) => {
+        state.passwordLoading = true;
+      })
+      .addCase(changePasswordRequest.fulfilled, (state) => {
+        state.passwordLoading = false;
+      })
+      .addCase(changePasswordRequest.rejected, (state, action) => {
+        state.passwordLoading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(changePasswordVerify.pending, (state) => {
+        state.otpLoading = true;
+      })
+      .addCase(changePasswordVerify.fulfilled, (state) => {
+        state.otpLoading = false;
+      })
+      .addCase(changePasswordVerify.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.error = action.payload;
       });
   },
 });

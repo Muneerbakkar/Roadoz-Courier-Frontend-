@@ -104,7 +104,7 @@ export function Franchise() {
                 <Download size={16} className="mr-2" /> Export
             </Button>
             <Button 
-                onClick={() => navigate("/franchise/add")} 
+                onClick={() => navigate("/dashboard/franchise/add")} 
                 className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-black font-bold h-10 px-4 rounded-xl shadow-lg transition-all text-xs"
             >
                 <Plus size={18} className="mr-2" /> New Application
