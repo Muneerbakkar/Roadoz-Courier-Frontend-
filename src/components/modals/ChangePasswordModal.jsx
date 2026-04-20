@@ -4,26 +4,147 @@ import { changePasswordRequest } from "../../redux/profileSlice";
 import { motion } from "framer-motion";
 import { Lock, X, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { Button } from "../ui/button";
+import toast from "react-hot-toast";
 
 export default function ChangePasswordModal({ onClose, onSuccess }) {
   const dispatch = useDispatch();
   const { passwordLoading } = useSelector((s) => s.profile);
 
+  const [errors, setErrors] = useState({});
   const [form, setForm] = useState({
     old_password: "",
     new_password: "",
     confirm_password: "",
   });
 
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+  const validatePassword = (password) => {
+    const errors = [];
+
+    if (!/[A-Z]/.test(password)) errors.push("Uppercase letter is missing");
+    if (!/[a-z]/.test(password)) errors.push("Lowercase letter is missing");
+    if (!/[0-9]/.test(password)) errors.push("Number is missing");
+    if (!/[@$!%*?&]/.test(password))
+      errors.push("Special character is missing");
+    if (password.length < 8) errors.push("Minimum 8 characters required");
+
+    return errors;
+  };
+
+  const validate = () => {
+    const newErrors = {};
+
+    // OLD PASSWORD
+    if (!form.old_password) {
+      newErrors.old_password = "Old password is required";
+    } else {
+      const passwordErrors = validatePassword(form.old_password);
+
+      if (passwordErrors.length > 0) {
+        newErrors.old_password = passwordErrors.join(", ");
+      }
+    }
+
+    // NEW PASSWORD
+    if (!form.new_password) {
+      newErrors.new_password = "New password is required";
+    } else {
+      const passwordErrors = validatePassword(form.new_password);
+
+      if (passwordErrors.length > 0) {
+        newErrors.new_password = passwordErrors.join(", ");
+      }
+    }
+
+    // CONFIRM PASSWORD
+    if (!form.confirm_password) {
+      newErrors.confirm_password = "Confirm your password";
+    } else if (form.new_password !== form.confirm_password) {
+      newErrors.confirm_password = "Passwords do not match";
+    }
+
+    return newErrors;
+  };
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+
+      // OLD PASSWORD
+      if (name === "old_password") {
+        if (!value) {
+          newErrors.old_password = "Old password is required";
+        } else {
+          const passwordErrors = validatePassword(value);
+
+          if (passwordErrors.length > 0) {
+            newErrors.old_password = passwordErrors.join(", ");
+          } else {
+            delete newErrors.old_password;
+          }
+        }
+      }
+
+      // NEW PASSWORD
+      if (name === "new_password") {
+        if (!value) {
+          newErrors.new_password = "New password is required";
+        } else {
+          const passwordErrors = validatePassword(value);
+
+          if (passwordErrors.length > 0) {
+            newErrors.new_password = passwordErrors.join(", ");
+          } else {
+            delete newErrors.new_password;
+          }
+        }
+
+        // 🔥 sync confirm password
+        if (form.confirm_password) {
+          if (value !== form.confirm_password) {
+            newErrors.confirm_password = "Passwords do not match";
+          } else {
+            delete newErrors.confirm_password;
+          }
+        }
+      }
+
+      // CONFIRM PASSWORD
+      if (name === "confirm_password") {
+        if (!value) {
+          newErrors.confirm_password = "Confirm your password";
+        } else if (value !== form.new_password) {
+          newErrors.confirm_password = "Passwords do not match";
+        } else {
+          delete newErrors.confirm_password;
+        }
+      }
+
+      return newErrors;
+    });
   };
 
   const handleSubmit = async () => {
-    if (form.new_password !== form.confirm_password) {
-      alert("Passwords do not match");
+    // Run validation
+    const validationErrors = validate();
+    setErrors(validationErrors);
+
+    // Stop if errors exist
+    if (Object.keys(validationErrors).length > 0) {
+      toast.error("Please fix the highlighted errors");
       return;
     }
+
+    // Show loading toast
+    const loadingToast = toast.loading("Sending OTP...");
 
     try {
       await dispatch(
@@ -34,9 +155,23 @@ export default function ChangePasswordModal({ onClose, onSuccess }) {
         }),
       ).unwrap();
 
+      // Success
+      toast.dismiss(loadingToast);
+      toast.success("OTP sent successfully 🚀");
+
       onSuccess(form.new_password);
     } catch (err) {
-      alert(err);
+      // Error
+      toast.dismiss(loadingToast);
+
+      console.log("ERROR:", err);
+
+      toast.error(
+        err?.message ||
+          err?.detail ||
+          err?.data?.detail ||
+          "Something went wrong",
+      );
     }
   };
 
@@ -70,24 +205,30 @@ export default function ChangePasswordModal({ onClose, onSuccess }) {
         {/* Body */}
         <div className="p-6 bg-card-bg space-y-5">
           <InputField
+            key="old_password"
             label="Old Password *"
             name="old_password"
             value={form.old_password}
             onChange={handleChange}
+            error={errors.old_password}
           />
 
           <InputField
+            key="new_password"
             label="New Password *"
             name="new_password"
             value={form.new_password}
             onChange={handleChange}
+            error={errors.new_password}
           />
 
           <InputField
+            key="confirm_password"
             label="Confirm Password *"
             name="confirm_password"
             value={form.confirm_password}
             onChange={handleChange}
+            error={errors.confirm_password}
           />
         </div>
 
@@ -113,7 +254,7 @@ export default function ChangePasswordModal({ onClose, onSuccess }) {
   );
 }
 
-function InputField({ label, name, value, onChange }) {
+function InputField({ label, name, value, onChange, error }) {
   const [show, setShow] = useState(false);
 
   return (
@@ -129,7 +270,11 @@ function InputField({ label, name, value, onChange }) {
           value={value}
           onChange={onChange}
           autoComplete="new-password"
-          className="w-full bg-dashboard-bg border border-border-subtle rounded-xl px-4 py-2.5 pr-12 text-sm text-text-main focus:border-primary focus:outline-none"
+          className={`w-full bg-dashboard-bg border rounded-xl px-4 py-2.5 pr-12 text-sm text-text-main focus:outline-none ${
+            error
+              ? "border-red-500"
+              : "border-border-subtle focus:border-primary"
+          }`}
         />
 
         <button
@@ -140,6 +285,9 @@ function InputField({ label, name, value, onChange }) {
           {show ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
+
+      {/* Error Message */}
+      {error && <p className="text-xs text-red-500 ml-1">{error}</p>}
     </div>
   );
 }
