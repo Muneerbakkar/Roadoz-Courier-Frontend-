@@ -2,8 +2,9 @@ import { useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { changePasswordVerify } from "../../redux/profileSlice";
 import { motion } from "framer-motion";
-import { X, Mail } from "lucide-react";
+import { X, Mail, ShieldCheck } from "lucide-react";
 import { Button } from "../ui/button";
+import toast from "react-hot-toast";
 
 export default function VerifyOtpModal({ onClose, newPassword }) {
   const dispatch = useDispatch();
@@ -24,10 +25,21 @@ export default function VerifyOtpModal({ onClose, newPassword }) {
     }
   };
 
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputsRef.current[index - 1].focus();
+    }
+  };
+
   const handleVerify = async () => {
     const finalOtp = otp.join("");
 
-    console.log("Sending OTP:", finalOtp); 
+    if (finalOtp.length !== 6) {
+      toast.error("Please enter complete OTP");
+      return;
+    }
+
+    const loadingToast = toast.loading("Verifying OTP...");
 
     try {
       await dispatch(
@@ -36,11 +48,16 @@ export default function VerifyOtpModal({ onClose, newPassword }) {
         }),
       ).unwrap();
 
-      alert("Password updated successfully");
+      toast.dismiss(loadingToast);
+      toast.success("Password updated successfully");
+
       onClose();
     } catch (err) {
+      toast.dismiss(loadingToast);
+
       console.log("ERROR:", err);
-      alert(err);
+
+      toast.error(err?.message || err?.detail || "OTP verification failed");
     }
   };
 
@@ -54,8 +71,19 @@ export default function VerifyOtpModal({ onClose, newPassword }) {
       >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-border-subtle">
-          <h3 className="text-lg font-bold">Verify OTP</h3>
-          <X onClick={onClose} className="cursor-pointer" />
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/20 rounded-lg">
+              <ShieldCheck className="text-primary" size={20} />
+            </div>
+            <h3 className="text-lg font-bold text-text-main">Verify OTP</h3>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-dashboard-bg rounded-full text-text-muted"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         {/* Body */}
@@ -81,7 +109,9 @@ export default function VerifyOtpModal({ onClose, newPassword }) {
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(e.target.value, i)}
-                className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-border-subtle focus:border-primary"
+                onKeyDown={(e) => handleKeyDown(e, i)}
+                className="w-12 h-12 text-center text-lg font-bold rounded-xl border border-border-subtle 
+                focus:outline-none focus:ring-0 focus:ring-primary focus:border-primary"
               />
             ))}
           </div>
