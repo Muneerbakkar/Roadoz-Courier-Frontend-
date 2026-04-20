@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, EyeOff, Lock, Mail, ArrowLeft, Hash, ShieldCheck, AlertCircle } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  ArrowLeft,
+  Hash,
+  ShieldCheck,
+  AlertCircle,
+} from "lucide-react";
 import Logo from "../assets/images/Roadoz Golden hd.png";
 import { Button } from "../components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,8 +19,10 @@ import { loginUser } from "../redux/authSlice";
 export function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
-  const { loading, error, role, isAuthenticated } = useSelector((state) => state.auth);
+
+  const { loading, error, role, isAuthenticated } = useSelector(
+    (state) => state.auth,
+  );
 
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -19,31 +30,74 @@ export function Login() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    franchiseCode: ""
+    franchiseCode: "",
   });
+
+  const [loginError, setLoginError] = useState("");
+
+  // const handleInputChange = (e) => {
+  //   setFormData({ ...formData, [e.target.name]: e.target.value });
+  // };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setLoginError("");
   };
+
+  // const handleFirstStep = async (e) => {
+  //   e.preventDefault();
+
+  //   const payload = {
+  //     email: formData.email,
+  //     password: formData.password
+  //   };
+
+  //   const resultAction = await dispatch(loginUser(payload));
+
+  //   if (loginUser.fulfilled.match(resultAction)) {
+  //     const userRole = resultAction.payload.role;
+
+  //     if (userRole === "super_admin") {
+  //       navigate("/dashboard");
+  //     } else {
+  //       setStep(2);
+  //     }
+  //   }
+  // };
 
   const handleFirstStep = async (e) => {
     e.preventDefault();
-    
-    const payload = {
-      email: formData.email,
-      password: formData.password
-    };
 
-    const resultAction = await dispatch(loginUser(payload));
-    
-    if (loginUser.fulfilled.match(resultAction)) {
-      const userRole = resultAction.payload.role;
-      
-      if (userRole === "super_admin") {
-        navigate("/dashboard");
+    setLoginError(""); // clear previous error
+
+    try {
+      const resultAction = await dispatch(
+        loginUser({
+          email: formData.email,
+          password: formData.password,
+        }),
+      );
+
+      if (loginUser.fulfilled.match(resultAction)) {
+        const userRole = resultAction.payload?.role;
+
+        if (userRole === "super_admin") {
+          navigate("/dashboard");
+        } else {
+          setStep(2);
+        }
       } else {
-        setStep(2);
+        // ✅ handle backend error safely
+        const message =
+          resultAction?.payload?.detail ||
+          resultAction?.error?.message ||
+          "Login failed";
+
+        setLoginError(message);
       }
+    } catch (err) {
+      console.error(err);
+      setLoginError("Something went wrong. Try again.");
     }
   };
 
@@ -57,9 +111,16 @@ export function Login() {
   return (
     <div className="min-h-screen bg-dashboard-bg flex flex-col items-center justify-center p-4">
       <div className="mb-10 text-center">
-        <img src={Logo} alt="Roadoz Logo" className="h-16 w-auto mx-auto mb-4 object-contain" />
+        <img
+          src={Logo}
+          alt="Roadoz Logo"
+          className="h-16 w-auto mx-auto mb-4 object-contain"
+        />
         <h1 className="text-2xl font-bold text-text-main tracking-tight italic">
-          ROADOZ <span className="text-primary not-italic tracking-normal ml-1">LOGISTICS</span>
+          ROADOZ{" "}
+          <span className="text-primary not-italic tracking-normal ml-1">
+            LOGISTICS
+          </span>
         </h1>
       </div>
 
@@ -74,22 +135,38 @@ export function Login() {
               className="p-8 md:p-10"
             >
               <div className="text-center mb-10">
-                <h2 className="text-3xl font-bold text-text-main mb-2">Sign In</h2>
-                <p className="text-text-muted font-medium italic">Enter your credentials to continue</p>
+                <h2 className="text-3xl font-bold text-text-main mb-2">
+                  Sign In
+                </h2>
+                <p className="text-text-muted font-medium italic">
+                  Enter your credentials to continue
+                </p>
               </div>
 
-              {error && (
+              {/* {error && (
                 <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-500 text-sm">
                   <AlertCircle size={18} />
                   <span>{error}</span>
+                </div>
+              )} */}
+
+              {loginError && (
+                <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-500 text-sm">
+                  <AlertCircle size={18} />
+                  <span>{loginError}</span>
                 </div>
               )}
 
               <form onSubmit={handleFirstStep} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-text-muted uppercase tracking-wider block">Email Address</label>
+                  <label className="text-xs font-bold text-text-muted uppercase tracking-wider block">
+                    Email Address
+                  </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                    <Mail
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                      size={18}
+                    />
                     <input
                       type="email"
                       name="email"
@@ -104,11 +181,22 @@ export function Login() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Password</label>
-                    <Link to="/forgot-password" size="sm" className="text-primary text-xs font-bold hover:underline">Forgot?</Link>
+                    <label className="text-xs font-bold text-text-muted uppercase tracking-wider">
+                      Password
+                    </label>
+                    <Link
+                      to="/forgot-password"
+                      size="sm"
+                      className="text-primary text-xs font-bold hover:underline"
+                    >
+                      Forgot?
+                    </Link>
                   </div>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                    <Lock
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                      size={18}
+                    />
                     <input
                       type={showPassword ? "text" : "password"}
                       name="password"
@@ -118,13 +206,21 @@ export function Login() {
                       placeholder="••••••••"
                       required
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-text-muted hover:text-primary">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-text-muted hover:text-primary"
+                    >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full bg-primary text-black font-bold py-7 rounded-xl shadow-lg hover:bg-primary/90 text-base uppercase tracking-widest">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary text-black font-bold py-7 rounded-xl shadow-lg hover:bg-primary/90 text-base uppercase tracking-widest"
+                >
                   {loading ? "Authenticating..." : "Continue"}
                 </Button>
               </form>
@@ -148,15 +244,25 @@ export function Login() {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShieldCheck className="text-primary" size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-text-main mb-2">Franchise Verification</h2>
-                <p className="text-text-muted text-sm italic px-4">Please enter your unique Franchise ID to access your dashboard.</p>
+                <h2 className="text-2xl font-bold text-text-main mb-2">
+                  Franchise Verification
+                </h2>
+                <p className="text-text-muted text-sm italic px-4">
+                  Please enter your unique Franchise ID to access your
+                  dashboard.
+                </p>
               </div>
 
               <form onSubmit={handleFinalStep} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-text-muted uppercase tracking-wider block">Franchise Code</label>
+                  <label className="text-xs font-bold text-text-muted uppercase tracking-wider block">
+                    Franchise Code
+                  </label>
                   <div className="relative">
-                    <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
+                    <Hash
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                      size={18}
+                    />
                     <input
                       type="text"
                       name="franchiseCode"
@@ -170,7 +276,10 @@ export function Login() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full bg-primary text-black font-bold py-7 rounded-xl shadow-lg hover:bg-primary/90 text-base uppercase tracking-widest">
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-black font-bold py-7 rounded-xl shadow-lg hover:bg-primary/90 text-base uppercase tracking-widest"
+                >
                   Verify & Enter
                 </Button>
               </form>
