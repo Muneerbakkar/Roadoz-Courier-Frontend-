@@ -6,5 +6,4 @@ export const ENDPOINTS = {
   // PROFILE_IMAGE: "/profile/image",
   CHANGE_PASSWORD_REQUEST: "/profile/change-password/request",
   CHANGE_PASSWORD_VERIFY: "/profile/change-password/verify",
-  CHECK_ROLE: "/auth/role",
 };

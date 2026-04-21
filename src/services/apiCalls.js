@@ -90,3 +90,28 @@ export const changePasswordVerifyApi = async (data) => {
   const res = await API.post(ENDPOINTS.CHANGE_PASSWORD_VERIFY, data);
   return res.data;
 };
+
+export const fetchFranchisesApi = async (params) => {
+  const res = await API.get(ENDPOINTS.FRANCHISE, { params });
+  return res.data;
+};
+
+export const fetchFranchiseByIdApi = async (id) => {
+  const res = await API.get(`${ENDPOINTS.FRANCHISE}/${id}`);
+  return res.data;
+};
+
+export const createFranchiseApi = async (data) => {
+  const res = await API.post(ENDPOINTS.FRANCHISE, data);
+  return res.data;
+};
+
+export const updateFranchiseApi = async (id, data) => {
+  const res = await API.put(`${ENDPOINTS.FRANCHISE}/${id}`, data);
+  return res.data;
+};
+
+export const deleteFranchiseApi = async (id) => {
+  const res = await API.delete(`${ENDPOINTS.FRANCHISE}/${id}`);
+  return res.data;
+};
