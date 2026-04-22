@@ -28,6 +28,14 @@ export function Franchise() {
   const [selectedFranchise, setSelectedFranchise] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
+  // 1. Client-side sorting as a secondary safety measure (Latest First)
+  const sortedItems = useMemo(() => {
+    if (!items) return [];
+    return [...items].sort((a, b) => {
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+  }, [items]);
+
   useEffect(() => {
     fetchData();
   }, [dispatch]);
@@ -39,16 +47,18 @@ export function Franchise() {
       search: searchTerm || undefined,
       start_date: startDate || undefined,
       end_date: endDate || undefined,
+      // 2. Explicitly requesting the backend to sort by creation date
+      sort: 'created_at',
+      order: 'desc',
       ...customParams
     };
     dispatch(getFranchises(params));
   };
 
-   const handlePageChange = (newPage) => {
+  const handlePageChange = (newPage) => {
     fetchData({ page: newPage });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
 
   const handleFilter = () => {
     fetchData({ page: 1 }); 
@@ -58,7 +68,7 @@ export function Franchise() {
     setSearchTerm("");
     setStartDate("");
     setEndDate("");
-    dispatch(getFranchises({ page: 1, limit: 10 }));
+    dispatch(getFranchises({ page: 1, limit: 10, sort: 'created_at', order: 'desc' }));
   };
 
   const handleDelete = async (id) => {
@@ -85,10 +95,10 @@ export function Franchise() {
   };
 
   const exportToCSV = () => {
-    if (items.length === 0) return;
+    if (sortedItems.length === 0) return;
     
     const headers = ["Code,Name,Email,Mobile,Location,Status,Joined Date"];
-    const rows = items.map(f => [
+    const rows = sortedItems.map(f => [
       f.franchise_code,
       f.full_name,
       f.email_id,
@@ -200,6 +210,7 @@ export function Franchise() {
         </div>
       ) : (
         <>
+          {/* Desktop View */}
           <Card className="hidden md:block bg-card-bg border-border-subtle shadow-sm overflow-hidden rounded-2xl">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -215,7 +226,7 @@ export function Franchise() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-subtle">
-                    {items.map(f => (
+                    {sortedItems.map(f => (
                       <tr key={f.id} className="hover:bg-dashboard-bg/20 transition-colors group">
                         <td className="px-6 py-4">
                             <div className="font-mono font-bold text-primary text-xs">{f.franchise_code}</div>
@@ -272,7 +283,7 @@ export function Franchise() {
                   </tbody>
                 </table>
               </div>
-               <Pagination 
+              <Pagination 
                 currentPage={pagination.page} 
                 totalPages={pagination.pages} 
                 totalEntries={pagination.total}
@@ -282,8 +293,9 @@ export function Franchise() {
             </CardContent>
           </Card>
 
+          {/* Mobile View */}
           <div className="md:hidden space-y-4">
-            {items.map(f => (
+            {sortedItems.map(f => (
               <Card key={f.id} className="bg-card-bg border-border-subtle overflow-hidden">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-4">
@@ -320,7 +332,7 @@ export function Franchise() {
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex flex-col">
                         <span className="text-[9px] text-text-muted uppercase font-bold">Submitted On</span>
-                        <span className="text-[11px] font-mono text-text-main">{f.submission_date}</span>
+                        <span className="text-[11px] font-mono text-text-main">{new Date(f.created_at).toLocaleDateString()}</span>
                       </div>
                       <div className="flex gap-2">
                         <button 
@@ -344,21 +356,24 @@ export function Franchise() {
                       </div>
                     </div>
                   </div>
-                  <Pagination 
+                </CardContent>
+              </Card>
+            ))}
+            {/* Pagination moved outside the map loop */}
+            {sortedItems.length > 0 && (
+                <Pagination 
                     currentPage={pagination.page} 
                     totalPages={pagination.pages} 
                     totalEntries={pagination.total}
                     limit={pagination.limit}
                     onPageChange={handlePageChange}
                 />
-                </CardContent>
-              </Card>
-            ))}
+            )}
           </div>
         </>
       )}
 
-      {!loading && items.length === 0 && (
+      {!loading && sortedItems.length === 0 && (
         <div className="py-20 text-center space-y-3 bg-card-bg rounded-2xl border border-dashed border-border-subtle">
             <div className="inline-flex p-4 rounded-full bg-dashboard-bg text-text-muted">
                 <Search size={32} />
