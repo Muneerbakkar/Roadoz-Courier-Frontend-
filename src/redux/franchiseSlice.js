@@ -1,66 +1,86 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { 
-  fetchFranchisesApi, 
-  fetchFranchiseByIdApi, 
-  createFranchiseApi, 
+import {
+  fetchFranchisesApi,
+  fetchFranchiseByIdApi,
+  createFranchiseApi,
   deleteFranchiseApi,
-  updateFranchiseApi 
+  updateFranchiseApi,
 } from "../services/apiCalls";
 
 export const getFranchises = createAsyncThunk(
-  "franchise/fetchAll", 
+  "franchise/fetchAll",
   async (params, { rejectWithValue }) => {
     try {
       return await fetchFranchisesApi(params);
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to fetch franchises");
+      return rejectWithValue(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to fetch franchises",
+      );
     }
-  }
+  },
 );
 
 export const getFranchiseById = createAsyncThunk(
-  "franchise/fetchById", 
+  "franchise/fetchById",
   async (id, { rejectWithValue }) => {
     try {
       return await fetchFranchiseByIdApi(id);
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to fetch franchise details");
+      return rejectWithValue(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to fetch franchise details",
+      );
     }
-  }
+  },
 );
 
 export const createFranchise = createAsyncThunk(
-  "franchise/create", 
+  "franchise/create",
   async (data, { rejectWithValue }) => {
     try {
       return await createFranchiseApi(data);
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to create franchise");
+      return rejectWithValue(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to create franchise",
+      );
     }
-  }
+  },
 );
 
 export const updateFranchise = createAsyncThunk(
-  "franchise/update", 
+  "franchise/update",
   async ({ id, data }, { rejectWithValue }) => {
     try {
       return await updateFranchiseApi(id, data);
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to update franchise");
+      return rejectWithValue(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to update franchise",
+      );
     }
-  }
+  },
 );
 
 export const deleteFranchise = createAsyncThunk(
-  "franchise/delete", 
+  "franchise/delete",
   async (id, { rejectWithValue }) => {
     try {
       await deleteFranchiseApi(id);
-      return id; 
+      return id;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Failed to delete franchise");
+      return rejectWithValue(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          "Failed to delete franchise",
+      );
     }
-  }
+  },
 );
 
 export const toggleFranchiseStatus = updateFranchise;
@@ -68,16 +88,16 @@ export const toggleFranchiseStatus = updateFranchise;
 const franchiseSlice = createSlice({
   name: "franchise",
   initialState: {
-    items: [],             
-    selectedFranchise: null, 
-    loading: false,        
-    error: null,           
+    items: [],
+    selectedFranchise: null,
+    loading: false,
+    error: null,
     pagination: {
       total: 0,
       page: 1,
       limit: 10,
-      pages: 1
-    }
+      pages: 1,
+    },
   },
   reducers: {
     clearSelectedFranchise: (state) => {
@@ -85,11 +105,11 @@ const franchiseSlice = createSlice({
     },
     resetError: (state) => {
       state.error = null;
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
-     
+
       .addCase(getFranchises.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -101,7 +121,7 @@ const franchiseSlice = createSlice({
           total: action.payload.total || 0,
           page: action.payload.page || 1,
           limit: action.payload.limit || 10,
-          pages: action.payload.pages || 1
+          pages: action.payload.pages || 1,
         };
       })
       .addCase(getFranchises.rejected, (state, action) => {
@@ -109,7 +129,6 @@ const franchiseSlice = createSlice({
         state.error = action.payload;
       })
 
-  
       .addCase(getFranchiseById.pending, (state) => {
         state.loading = true;
         state.selectedFranchise = null;
@@ -123,7 +142,6 @@ const franchiseSlice = createSlice({
         state.error = action.payload;
       })
 
-      
       .addCase(createFranchise.pending, (state) => {
         state.loading = true;
       })
@@ -137,13 +155,14 @@ const franchiseSlice = createSlice({
         state.error = action.payload;
       })
 
-    
       .addCase(updateFranchise.pending, (state) => {
         state.loading = true;
       })
       .addCase(updateFranchise.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.items.findIndex(item => item.id === action.payload.id);
+        const index = state.items.findIndex(
+          (item) => item.id === action.payload.id,
+        );
         if (index !== -1) {
           state.items[index] = action.payload;
         }
@@ -156,9 +175,8 @@ const franchiseSlice = createSlice({
         state.error = action.payload;
       })
 
-    
       .addCase(deleteFranchise.fulfilled, (state, action) => {
-        state.items = state.items.filter(item => item.id !== action.payload);
+        state.items = state.items.filter((item) => item.id !== action.payload);
         state.pagination.total -= 1;
       });
   },
