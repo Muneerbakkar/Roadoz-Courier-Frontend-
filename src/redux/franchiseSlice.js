@@ -160,6 +160,7 @@ const franchiseSlice = createSlice({
       })
       .addCase(updateFranchise.fulfilled, (state, action) => {
         state.loading = false;
+
         const index = state.items.findIndex(
           (item) => item.id === action.payload.id,
         );
