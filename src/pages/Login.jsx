@@ -77,19 +77,19 @@ export function Login() {
     e.preventDefault();
     setLoginError("");
 
-    // ✅ Step 1: check role via Redux
+    // Step 1: check role via Redux
     const roleResult = await dispatch(checkUserRole(formData.email));
 
     if (checkUserRole.fulfilled.match(roleResult)) {
       const { role, requires_franchise_code } = roleResult.payload;
 
-      // ✅ Franchise → go to step 2
+      // Franchise → go to step 2
       if (requires_franchise_code || role === "franchise") {
         setStep(2);
         return;
       }
 
-      // ✅ Admin → login
+      // Admin → login
       const loginResult = await dispatch(
         loginUser({
           email: formData.email,
