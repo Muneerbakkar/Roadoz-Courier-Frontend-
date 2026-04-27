@@ -136,13 +136,62 @@ export const deleteUserApi = async (id) => {
   return res.data;
 };
 
-export const fetchRolesApi = async () => {
-  const res = await API.get("/rbac/roles");
-  return res.data; 
-};
+// export const fetchRolesApi = async () => {
+//   const res = await API.get("/rbac/roles");
+//   return res.data;
+// };
 
 export const assignRoleToUserApi = async (userId, roleId) => {
   const res = await API.put(`/rbac/users/${userId}`, { role_id: roleId });
   return res.data;
 };
 
+export const fetchRolesApi = async (params) => {
+  const res = await API.get(ENDPOINTS.ROLES, { params });
+  return res.data;
+};
+
+export const fetchRoleByIdApi = async (id) => {
+  const res = await API.get(`${ENDPOINTS.ROLES}/${id}`);
+  return res.data;
+};
+
+export const createRoleApi = async (data) => {
+  const res = await API.post(ENDPOINTS.ROLES, data);
+  return res.data;
+};
+
+export const updateRoleApi = async (id, data) => {
+  const res = await API.put(`${ENDPOINTS.ROLES}/${id}`, data);
+  return res.data;
+};
+
+export const deleteRoleApi = async (id) => {
+  const res = await API.delete(`${ENDPOINTS.ROLES}/${id}`);
+  return res.data;
+};
+
+export const fetchPermissionsApi = async (params) => {
+  const res = await API.get("/rbac/permissions", { params });
+  return res.data;
+};
+
+export const fetchPermissionByIdApi = async (id) => {
+  const res = await API.get(`/rbac/permissions/${id}`);
+  return res.data;
+};
+
+export const createPermissionApi = async (data) => {
+  const res = await API.post("/rbac/permissions", data);
+  return res.data;
+};
+
+export const updatePermissionApi = async (id, data) => {
+  const res = await API.put(`/rbac/permissions/${id}`, data);
+  return res.data;
+};
+
+export const deletePermissionApi = async (id) => {
+  const res = await API.delete(`/rbac/permissions/${id}`);
+  return res.data;
+};

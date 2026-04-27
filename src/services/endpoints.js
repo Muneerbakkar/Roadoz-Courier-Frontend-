@@ -1,6 +1,6 @@
 export const ENDPOINTS = {
   LOGIN: "/auth/login",
-  CHECK_ROLE:"/auth/role",
+  CHECK_ROLE: "/auth/role",
   LOGOUT: "/auth/logout",
   PROFILE: "/profile",
   UPLOAD_IMAGE: "/profile/upload-image",
@@ -9,4 +9,5 @@ export const ENDPOINTS = {
   CHANGE_PASSWORD_VERIFY: "/profile/change-password/verify",
   FRANCHISE: "/franchise",
   USERS: "/rbac/users",
+  ROLES: "/rbac/roles",
 };
