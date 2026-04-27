@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import Cookies from "js-cookie";
 import { Toaster } from "react-hot-toast";
 
@@ -33,19 +38,18 @@ import FranchiseWizard from "./components/common/FranchiseWizard";
 import { ProtectedRoute } from "./components/common/ProtectedRoute";
 import { NotFound } from "./pages/NotFound";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { RolesManagement } from "./pages/admin/RolesManagement";
+import AddRolePage from "./pages/admin/AddRolePage";
+import RoleWizard from "./components/common/RoleWizard";
 
 export default function App() {
   const token = Cookies.get("access_token");
 
   return (
     <ThemeProvider>
-       <Toaster
-        position="top-right"
-        reverseOrder={false}
-      />
+      <Toaster position="top-right" reverseOrder={false} />
       <Router>
         <Routes>
-
           <Route
             path="/"
             element={
@@ -81,9 +85,15 @@ export default function App() {
             <Route path="cancelled" element={<ProcessingOrders />} />
             <Route path="returned" element={<ProcessingOrders />} />
 
-            <Route path="serviceable-pincode" element={<ServiceablePincode />} />
+            <Route
+              path="serviceable-pincode"
+              element={<ServiceablePincode />}
+            />
             <Route path="rate-calculator" element={<RateCalculator />} />
-            <Route path="channel-integration" element={<ChannelIntegration />} />
+            <Route
+              path="channel-integration"
+              element={<ChannelIntegration />}
+            />
             <Route path="wallet" element={<Wallet />} />
             <Route path="cod-remittance" element={<CODRemittance />} />
             <Route path="invoices" element={<Invoices />} />
@@ -101,13 +111,20 @@ export default function App() {
 
             {/* Admin */}
             <Route path="admin/assign-roles" element={<Permissions />} />
-            <Route path="admin/roles" element={<Roles />} />
+            {/* <Route path="admin/roles" element={<Roles />} /> */}
             <Route path="admin/users" element={<Users />} />
+            <Route path="admin/roles" element={<RolesManagement />} />
+            {/* <Route path="admin/roles/add" element={<AddRolePage />} /> */}
+            <Route path="admin/roles/add" element={<RoleWizard />} />
+            <Route path="admin/roles/edit/:id" element={<RoleWizard />} />
 
             {/* Franchise */}
             <Route path="franchise" element={<Franchise />} />
             <Route path="franchise/add-staff" element={<StaffRegistration />} />
-            <Route path="franchise/edit-staff/:id" element={<StaffRegistration />} />
+            <Route
+              path="franchise/edit-staff/:id"
+              element={<StaffRegistration />}
+            />
             <Route path="franchise/add" element={<FranchiseWizard />} />
             <Route path="franchise/edit/:id" element={<FranchiseWizard />} />
           </Route>
@@ -124,7 +141,6 @@ export default function App() {
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
-
         </Routes>
       </Router>
     </ThemeProvider>
