@@ -1,5 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { createPickupAddressApi } from "../services/apiCalls";
+import {
+  createPickupAddressApi,
+  fetchPickupAddressesApi,
+} from "../services/apiCalls";
 
 // CREATE PICKUP ADDRESS
 export const createPickupAddress = createAsyncThunk(
@@ -10,6 +13,20 @@ export const createPickupAddress = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.detail || "Failed to create pickup address",
+      );
+    }
+  },
+);
+
+// FETCH PICKUP ADDRESSES
+export const fetchPickupAddresses = createAsyncThunk(
+  "orders/fetchPickupAddresses",
+  async (params, { rejectWithValue }) => {
+    try {
+      return await fetchPickupAddressesApi(params);
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.detail || "Failed to fetch pickup addresses",
       );
     }
   },
@@ -30,6 +47,9 @@ const orderSlice = createSlice({
     clearSelectedAddress: (state) => {
       state.selectedAddress = null;
     },
+    setSelectedAddress: (state, action) => {
+      state.selectedAddress = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -46,9 +66,30 @@ const orderSlice = createSlice({
       .addCase(createPickupAddress.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // FETCH PICKUP ADDRESSES
+      .addCase(fetchPickupAddresses.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchPickupAddresses.fulfilled, (state, action) => {
+        state.loading = false;
+        state.pickupAddresses = action.payload.items;
+        state.total = action.payload.total;
+        state.error = null;
+
+        // auto select first address (optional)
+        if (!state.selectedAddress && action.payload.items.length > 0) {
+          state.selectedAddress = action.payload.items[0];
+        }
+      })
+      .addCase(fetchPickupAddresses.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { clearOrderError, clearSelectedAddress } = orderSlice.actions;
+export const { clearOrderError, clearSelectedAddress, setSelectedAddress } =
+  orderSlice.actions;
 export default orderSlice.reducer;

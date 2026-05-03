@@ -35,7 +35,7 @@ export function RolesManagement() {
     fetchData({ page: 1 });
   }, []);
 
-  // 🔥 FIXED: removed backend filters
+  // FIXED: removed backend filters
   const fetchData = (custom = {}) => {
     dispatch(
       fetchRoles({
@@ -45,7 +45,7 @@ export function RolesManagement() {
     );
   };
 
-  // 🔥 FIXED: no API call on clear
+  // FIXED: no API call on clear
   const clearFilters = () => {
     setSearchTerm("");
     setStartDate("");
@@ -74,13 +74,13 @@ export function RolesManagement() {
     link.click();
   };
 
-  // 🔥 NEW: frontend filtering + search
+  // NEW: frontend filtering + search
   const filteredRoles = useMemo(() => {
     if (!items) return [];
 
     let data = [...items];
 
-    // 🔍 SEARCH (name + permissions)
+    // SEARCH (name + permissions)
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
 
@@ -95,7 +95,7 @@ export function RolesManagement() {
       });
     }
 
-    // 📅 DATE FILTER
+    // DATE FILTER
     if (startDate) {
       data = data.filter(
         (role) => new Date(role.created_at) >= new Date(startDate),
@@ -108,7 +108,7 @@ export function RolesManagement() {
       );
     }
 
-    // ⬇️ SORT
+    // SORT
     return data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [items, searchTerm, startDate, endDate]);
 
