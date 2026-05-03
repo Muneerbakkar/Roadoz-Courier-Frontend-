@@ -8,13 +8,20 @@ import {
   ShoppingBag,
   X,
 } from "lucide-react";
+import { motion } from "motion/react";
 import toast from "react-hot-toast";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import { Link } from "react-router-dom";
+import PickupAddressModal from "../components/modals/PickupAddressModal";
 import { useDispatch, useSelector } from "react-redux";
-import { createPickupAddress } from "../redux/orderSlice";
+import {
+  createPickupAddress,
+  fetchPickupAddresses,
+  setSelectedAddress,
+} from "../redux/orderSlice";
+import { useEffect } from "react";
 
 export default function NewOrder() {
   const [orderType, setOrderType] = useState("B2C");
@@ -40,9 +47,16 @@ export default function NewOrder() {
   const [isOtherDetailsOpen, setIsOtherDetailsOpen] = useState(false);
 
   const dispatch = useDispatch();
-  const { loading, error, selectedAddress } = useSelector(
+
+  useEffect(() => {
+    dispatch(fetchPickupAddresses());
+  }, [dispatch]);
+
+  const { loading, error, selectedAddress, pickupAddresses } = useSelector(
     (state) => state.orders,
   );
+
+  const [isAddressDropdownOpen, setIsAddressDropdownOpen] = useState(false);
 
   const [pickupForm, setPickupForm] = useState({
     nickname: "",
@@ -136,129 +150,18 @@ export default function NewOrder() {
     "w-full bg-transparent border border-border-subtle rounded-lg px-4 py-2.5 text-sm text-text-main focus:outline-none focus:border-primary";
 
   return (
-    <div className="space-y-6 pb-20 relative">
+    <div className="space-y-6 relative min-h-screen">
       {isPickupModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-card-bg border border-border-subtle rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden">
-            {/* HEADER */}
-            <div className="flex justify-between items-center p-6 border-b border-border-subtle">
-              <h2 className="text-xl font-semibold text-text-main">
-                Add Pickup Address
-              </h2>
-              <button onClick={() => setIsPickupModalOpen(false)}>
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* FORM */}
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input
-                name="nickname"
-                value={pickupForm.nickname}
-                onChange={handlePickupChange}
-                placeholder="Address Nickname*"
-                className={inputClass}
-              />
-
-              <input
-                name="contact_name"
-                value={pickupForm.contact_name}
-                onChange={handlePickupChange}
-                placeholder="Contact Name*"
-                className={inputClass}
-              />
-
-              <input
-                name="phone"
-                value={pickupForm.phone}
-                onChange={handlePickupChange}
-                placeholder="Phone*"
-                className={inputClass}
-              />
-
-              <input
-                name="email"
-                value={pickupForm.email}
-                onChange={handlePickupChange}
-                placeholder="Email"
-                type="email"
-                className={inputClass}
-              />
-
-              <input
-                name="address_line_1"
-                value={pickupForm.address_line_1}
-                onChange={handlePickupChange}
-                placeholder="Address Line 1*"
-                className={inputClass}
-              />
-
-              <input
-                name="address_line_2"
-                value={pickupForm.address_line_2}
-                onChange={handlePickupChange}
-                placeholder="Address Line 2"
-                className={inputClass}
-              />
-
-              <input
-                name="pincode"
-                value={pickupForm.pincode}
-                onChange={handlePickupChange}
-                placeholder="Pincode*"
-                className={inputClass}
-              />
-
-              <input
-                name="city"
-                value={pickupForm.city}
-                onChange={handlePickupChange}
-                placeholder="City*"
-                className={inputClass}
-              />
-
-              <input
-                name="state"
-                value={pickupForm.state}
-                onChange={handlePickupChange}
-                placeholder="State*"
-                className={inputClass}
-              />
-
-              <input
-                name="country"
-                value={pickupForm.country}
-                onChange={handlePickupChange}
-                className={`${inputClass} bg-dashboard-bg`}
-              />
-            </div>
-
-            {/* ERROR */}
-            {error && (
-              <div className="px-6 pb-2 text-red-500 text-sm">
-                {Array.isArray(error) ? error[0]?.msg : error}
-              </div>
-            )}
-
-            {/* FOOTER */}
-            <div className="p-6 border-t border-border-subtle flex justify-end gap-4">
-              <button
-                onClick={() => setIsPickupModalOpen(false)}
-                className="text-sm px-6 py-2.5 hover:bg-text-muted/5 rounded-lg"
-              >
-                Close
-              </button>
-
-              <Button
-                onClick={handleSavePickup}
-                disabled={loading}
-                className="bg-primary text-black px-8 py-2.5 rounded-lg font-semibold"
-              >
-                {loading ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <PickupAddressModal
+          isOpen={isPickupModalOpen}
+          onClose={() => setIsPickupModalOpen(false)}
+          pickupForm={pickupForm}
+          handlePickupChange={handlePickupChange}
+          handleSavePickup={handleSavePickup}
+          loading={loading}
+          error={error}
+          inputClass={inputClass}
+        />
       )}
       <div>
         <h1 className="text-2xl font-bold text-text-main">New Order</h1>
@@ -308,17 +211,51 @@ export default function NewOrder() {
           <h2 className="text-lg font-semibold text-text-main">Pickup From</h2>
           <div className="flex gap-4">
             <div className="flex-1 relative">
-              <input
-                type="text"
-                value={
-                  selectedAddress
-                    ? `${selectedAddress.nickname}, ${selectedAddress.city}, ${selectedAddress.state} - ${selectedAddress.pincode}`
-                    : ""
-                }
-                readOnly
-                className="w-full bg-transparent border border-primary/50 rounded-lg px-4 py-3 text-sm text-text-main focus:outline-none focus:border-primary"
-              />
+              <div className="relative">
+                {/* Input-style dropdown */}
+                <div
+                  onClick={() => setIsAddressDropdownOpen((prev) => !prev)}
+                  className="w-full bg-transparent border border-primary/50 rounded-lg px-4 py-3 text-sm text-text-main flex items-center justify-between cursor-pointer"
+                >
+                  <span>
+                    {selectedAddress
+                      ? `${selectedAddress.nickname}, ${selectedAddress.city}, ${selectedAddress.state} - ${selectedAddress.pincode}`
+                      : "Select pickup address"}
+                  </span>
+
+                  <ChevronDown size={18} className="text-text-muted" />
+                </div>
+
+                {/* Dropdown */}
+                {isAddressDropdownOpen && (
+                  <div className="absolute z-50 mt-2 w-full bg-card-bg border border-border-subtle rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {pickupAddresses?.length > 0 ? (
+                      pickupAddresses.map((addr) => (
+                        <div
+                          key={addr.id}
+                          onClick={() => {
+                            dispatch(setSelectedAddress(addr));
+                            setIsAddressDropdownOpen(false);
+                          }}
+                          className="px-4 py-3 hover:bg-dashboard-bg/20 cursor-pointer text-sm transition-colors duration-150"
+                        >
+                          <p className="font-medium">{addr.nickname}</p>
+                          <p className="text-xs text-text-muted">
+                            {addr.city}, {addr.state} - {addr.pincode}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-4 py-3 text-sm text-text-muted">
+                        No addresses found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Keep your add button */}
             <Button
               onClick={() => setIsPickupModalOpen(true)}
               className="bg-primary hover:bg-primary/90 text-black w-12 h-12 p-0 flex items-center justify-center rounded-lg"

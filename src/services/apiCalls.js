@@ -208,3 +208,8 @@ export const createPickupAddressApi = async (data) => {
   const res = await API.post("/orders/pickup-addresses", data);
   return res.data;
 };
+
+export const fetchPickupAddressesApi = async (params) => {
+  const res = await API.get("/orders/pickup-addresses", { params });
+  return res.data;
+};

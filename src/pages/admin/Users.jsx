@@ -264,7 +264,7 @@ export function Users() {
 
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-card-bg border border-border-subtle rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
               <div className="p-6 border-b border-border-subtle flex justify-between items-center bg-dashboard-bg/30">
                 <h3 className="font-bold text-text-main flex items-center gap-2 uppercase tracking-tight"><Settings className="text-primary" size={20} /> {editingUser ? "Update User Profile" : "Create User Account"}</h3>

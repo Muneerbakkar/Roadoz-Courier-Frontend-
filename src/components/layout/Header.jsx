@@ -129,7 +129,7 @@ export function Header({ toggleSidebar }) {
   ];
 
   return (
-    <div className="sticky top-0 z-[200] w-full">
+    <div className="sticky top-0 z-50 w-full">
       <header className="h-16 bg-card-bg border-b border-border-subtle flex items-center justify-between px-3 md:px-6 transition-colors duration-300">
         <div className="flex items-center gap-2 md:gap-4">
           <button
