@@ -214,6 +214,16 @@ export const fetchPickupAddressesApi = async (params) => {
   return res.data;
 };
 
+export const updatePickupAddressApi = async (id, data) => {
+  const res = await API.put(`/orders/pickup-addresses/${id}`, data);
+  return res.data;
+};
+
+export const deletePickupAddressApi = async (id) => {
+  const res = await API.delete(`/orders/pickup-addresses/${id}`);
+  return res.data;
+};
+
 export const createConsigneeApi = async (data) => {
   const res = await API.post("/orders/consignees", data);
   return res.data;
@@ -273,27 +283,8 @@ export const fetchInvoiceByIdApi = async (id) => {
 };
 
 export const getOrderPincodeApi = async (orderNumber, lat, lng) => {
-  console.log("[API CALL] getOrderPincodeApi");
-  const body = {
-    lat: Number(lat),
-    lng: Number(lng)
-  };
-
-  console.log("📤 JSON Body:", body);
-
-  try {
-    const res = await API.post(
-      `/orders/get-pincode/${orderNumber}`,
-      body
-    );
-
-    console.log("✅ API SUCCESS");
-    console.log("📥 Response:", res.data);
-    return res.data;
-  } catch (error) {
-    console.error("❌ API ERROR:", error);
-    throw error;
-  }
+  const res = await API.post(`/orders/get-pincode/${orderNumber}`, { lat, lng });
+  return res.data;
 };
 
 
@@ -303,23 +294,11 @@ export const scanOrderApi = async (orderNumber) => {
   return res.data;
 };
 
-export const fetchTodayScannedOrdersApi = async (filters) => {
-  const { date, status, page, limit } = filters;
-
-  // The JSON Body
-  const body = { date: date };
-
-  // The URL Query Parameters
-  const config = {
-    params: {
-      status: status,
-      page: page,
-      limit: limit
-    }
-  };
-
-  const res = await API.post("/orders/orders/today-status", body, config);
-  
+export const fetchTodayScannedOrdersApi = async (params) => {
+  const cleanParams = Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v != null && v !== "")
+  );
+  const res = await API.get("/orders/orders/today-status", { params: cleanParams });
   return res.data;
 };
 
