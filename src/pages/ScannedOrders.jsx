@@ -9,22 +9,26 @@ import {
 import { toast } from "react-hot-toast";
 import { Html5Qrcode } from "html5-qrcode";
 import {
-    scanOrderApi,
     fetchTodayScannedOrdersApi,
     getOrderPincodeApi
 } from "../services/apiCalls";
 import Pagination from "../components/ui/Pagination";
 
 export default function ScannedOrders() {
+    // Data States
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [scanLoading, setScanLoading] = useState(false);
+    
+    // UI States
     const [isScanning, setIsScanning] = useState(false);
     const [location, setLocation] = useState({ lat: null, lng: null });
     const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 1 });
 
+    // Refs
     const scannerRef = useRef(null);
     const inputRef = useRef(null);
-    const lastScannedRef = useRef("");
+    const scanCooldownRef = useRef({}); // Prevents duplicate scans of same code in short window
 
     const [filters, setFilters] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -33,24 +37,23 @@ export default function ScannedOrders() {
         limit: 10
     });
 
-    // 1. Geolocation Fetch with Logging
+    // 1. Geolocation Logic
     const getGeoLocation = useCallback(() => {
-        console.log("[DEBUG] Requesting Geolocation...");
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const coords = { lat: position.coords.latitude, lng: position.coords.longitude };
-                    console.log("[DEBUG] Geolocation Success:", coords);
+                    const coords = { 
+                        lat: Number(position.coords.latitude), 
+                        lng: Number(position.coords.longitude) 
+                    };
                     setLocation(coords);
                 },
                 (error) => {
-                    console.error("[DEBUG] Geolocation Error:", error.message);
+                    console.error("GPS Error:", error.message);
                     toast.error("Please enable GPS for accurate tracking");
                 },
                 { enableHighAccuracy: true }
             );
-        } else {
-            console.error("[DEBUG] Geolocation is not supported by this browser.");
         }
     }, []);
 
@@ -58,30 +61,19 @@ export default function ScannedOrders() {
         getGeoLocation();
     }, [getGeoLocation]);
 
-    // 2. Auto-focus for USB Handheld Scanners
-    useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, []);
-
-    // 3. Load Table Data with Logging
+    // 2. Load Table Data
     const loadScannedOrders = useCallback(async () => {
         setLoading(true);
-        console.log("[DEBUG] Fetching Orders with Filters:", filters);
         try {
-            // According to your description, this is a POST with a body and query params
             const res = await fetchTodayScannedOrdersApi({
                 date: filters.date,
                 status: filters.status,
                 page: filters.page,
                 limit: filters.limit
             });
-            console.log("[DEBUG] Fetch Orders Response:", res);
             setOrders(res.orders || []);
             setPagination(res.pagination || { page: 1, total_pages: 1 });
         } catch (error) {
-            console.error("[DEBUG] Fetch Orders Error:", error);
             toast.error("Failed to load records");
         } finally {
             setLoading(false);
@@ -92,290 +84,98 @@ export default function ScannedOrders() {
         loadScannedOrders();
     }, [loadScannedOrders]);
 
-    // 4. Unified Scan Process Logic (Camera & USB)
-  const handleScanSuccess = async (decodedText) => {
+    // 3. Auto-focus for Handheld USB Scanners
+    useEffect(() => {
+        const focusInput = () => {
+            if (!isScanning && inputRef.current) {
+                inputRef.current.focus();
+            }
+        };
+        focusInput();
+        window.addEventListener("click", focusInput);
+        return () => window.removeEventListener("click", focusInput);
+    }, [isScanning]);
 
-    /*
-    =========================================
-    BASIC VALIDATION
-    =========================================
-    */
+    // 4. Unified Scan Process Logic
+    const handleScanSuccess = async (decodedText) => {
+        if (!decodedText || scanLoading) return;
 
-    if (!decodedText) return;
+        // Clean Barcode Logic
+        let orderNumber = decodedText;
 
-    if (scanLoading) return;
-
-    /*
-    =========================================
-    CLEAN QR VALUE
-    =========================================
-    */
-
-    let orderNumber = decodedText;
-
-    console.log("RAW SCAN:", orderNumber);
-
-    /*
-    =========================================
-    REMOVE URL PART
-    =========================================
-    */
-
-    if (typeof orderNumber === "string" && orderNumber.includes("/")) {
-
-        const parts = orderNumber.split("/");
-
-        orderNumber = parts[parts.length - 1];
-    }
-
-    /*
-    =========================================
-    HANDLE JSON QR
-    =========================================
-    */
-
-    try {
-
-        const parsed = JSON.parse(orderNumber);
-
-        if (parsed?.order_number) {
-            orderNumber = parsed.order_number;
+        // Extract ID if URL is provided
+        if (typeof orderNumber === "string" && orderNumber.includes("/")) {
+            const parts = orderNumber.split("/");
+            orderNumber = parts[parts.length - 1];
         }
 
-    } catch (e) {
-        // normal barcode
-    }
+        // Handle JSON cases
+        try {
+            const parsed = JSON.parse(orderNumber);
+            if (parsed?.order_number) orderNumber = parsed.order_number;
+        } catch (e) {}
 
-    /*
-    =========================================
-    REMOVE EXTRA CHARACTERS
-    =========================================
-    */
+        // Remove whitespace and quotes
+        orderNumber = String(orderNumber).replace(/["\n\r\t\s+]/g, "").trim();
 
-    orderNumber = String(orderNumber)
-        .replace(/\n/g, "")
-        .replace(/\r/g, "")
-        .replace(/\t/g, "")
-        .replace(/"/g, "")
-        .replace(/\s+/g, "")
-        .trim();
+        if (!orderNumber) {
+            toast.error("Invalid QR Code");
+            return;
+        }
 
-    console.log("FINAL ORDER:", orderNumber);
+        // Duplicate Check (3 second cooldown)
+        const now = Date.now();
+        if (scanCooldownRef.current[orderNumber] && now - scanCooldownRef.current[orderNumber] < 3000) {
+            return;
+        }
+        scanCooldownRef.current[orderNumber] = now;
 
-    /*
-    =========================================
-    EMPTY CHECK
-    =========================================
-    */
+        // GPS Check
+        if (!location.lat || !location.lng) {
+            toast.error("Waiting for GPS location...");
+            getGeoLocation();
+            return;
+        }
 
-    if (!orderNumber) {
-
-        toast.error("Invalid QR Code");
-
-        return;
-    }
-
-    /*
-    =========================================
-    DUPLICATE BLOCK
-    =========================================
-    */
-
-    const now = Date.now();
-
-    if (
-        scanCooldownRef.current[orderNumber] &&
-        now - scanCooldownRef.current[orderNumber] < 3000
-    ) {
-        console.log("Duplicate blocked");
-        return;
-    }
-
-    scanCooldownRef.current[orderNumber] = now;
-
-    /*
-    =========================================
-    GPS VALIDATION
-    =========================================
-    */
-
-    if (
-        location?.lat === null ||
-        location?.lng === null ||
-        location?.lat === undefined ||
-        location?.lng === undefined
-    ) {
-
-        toast.error("Waiting for GPS location");
-
-        getGeoLocation();
-
-        return;
-    }
-
-    console.log("GPS:", {
-        lat: location.lat,
-        lng: location.lng
-    });
-
-    /*
-    =========================================
-    START LOADING
-    =========================================
-    */
-
-    setScanLoading(true);
-
-    const toastId = toast.loading(
-        `Processing ${orderNumber}...`
-    );
-
-    try {
-
-        /*
-        =========================================
-        API CALL
-        =========================================
-        */
-
-        const cleanOrderNumber = orderNumber.trim();
-
-        console.log("CALLING API WITH:", {
-            orderNumber: cleanOrderNumber,
-            lat: Number(location.lat),
-            lng: Number(location.lng)
-        });
-
-        // IMPORTANT:
-        // DON'T USE encodeURIComponent HERE
-        // axios handles params correctly
-        // encoding manually can cause network/API route issues
-
-        const res = await getOrderPincodeApi(
-            cleanOrderNumber,
-            Number(location.lat),
-            Number(location.lng)
-        );
-
-        console.log("API RESPONSE:", res);
-
-        /*
-        =========================================
-        SUCCESS FEEDBACK
-        =========================================
-        */
+        setScanLoading(true);
+        const toastId = toast.loading(`Processing ${orderNumber}...`);
 
         try {
-
-            const audio = new Audio(
-                "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
+            // API CALL: POST /orders/get-pincode/${orderNumber} with {lat, lng} body
+            const res = await getOrderPincodeApi(
+                orderNumber,
+                location.lat,
+                location.lng
             );
 
-            await audio.play();
+            // Audio Feedback
+            try {
+                new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg").play();
+            } catch (e) {}
+            if (navigator.vibrate) navigator.vibrate(200);
 
-        } catch (e) {
+            toast.success(res?.message || `Order ${orderNumber} scanned`, { id: toastId });
 
-            console.log("Audio Error:", e);
-        }
+            // Refresh List
+            await loadScannedOrders();
 
-        if (navigator.vibrate) {
-            navigator.vibrate(200);
-        }
-
-        toast.success(
-            res?.message ||
-            `Order ${cleanOrderNumber} scanned`,
-            {
-                id: toastId
+        } catch (error) {
+            const errorMsg = error?.response?.data?.message || error?.response?.data?.detail || "Scan failed";
+            toast.error(errorMsg, { id: toastId });
+        } finally {
+            setScanLoading(false);
+            if (inputRef.current) {
+                inputRef.current.value = "";
+                inputRef.current.focus();
             }
-        );
-
-        /*
-        =========================================
-        REFRESH TABLE
-        =========================================
-        */
-
-        await loadScannedOrders();
-
-        /*
-        =========================================
-        STOP CAMERA AFTER SUCCESS
-        =========================================
-        */
-
-        if (isScanning) {
-
-            await stopCamera();
         }
+    };
 
-    } catch (error) {
-
-        console.log("SCAN ERROR:", error);
-
-        console.log("FULL ERROR:", {
-            message: error?.message,
-            response: error?.response,
-            data: error?.response?.data,
-            status: error?.response?.status
-        });
-
-        /*
-        =========================================
-        NETWORK ERROR
-        =========================================
-        */
-
-        if (error?.message === "Network Error") {
-
-            toast.error(
-                "Unable to connect to server. Check internet/API.",
-                {
-                    id: toastId
-                }
-            );
-
-        } else {
-
-            toast.error(
-                error?.response?.data?.message ||
-                error?.response?.data?.detail ||
-                error?.message ||
-                "Invalid Barcode",
-                {
-                    id: toastId
-                }
-            );
-        }
-
-    } finally {
-
-        setScanLoading(false);
-
-        /*
-        =========================================
-        REFOCUS USB SCANNER
-        =========================================
-        */
-
-        if (inputRef.current) {
-
-            inputRef.current.value = "";
-
-            inputRef.current.focus();
-        }
-    }
-};
-
-    // 5. Camera Toggle Logic with heavy logging
+    // 5. Camera Toggle Logic
     const toggleScanner = async () => {
-        console.log("[DEBUG] Toggle Scanner Clicked. Current state:", isScanning);
-
         if (isScanning) {
             if (scannerRef.current) {
-                console.log("[DEBUG] Stopping Camera Scanner...");
-                await scannerRef.current.stop().catch((e) => console.error("[DEBUG] Stop Error:", e));
-                scannerRef.current.clear();
+                await scannerRef.current.stop().catch(() => {});
                 scannerRef.current = null;
             }
             setIsScanning(false);
@@ -383,87 +183,48 @@ export default function ScannedOrders() {
         }
 
         setIsScanning(true);
-
-        // Use timeout to ensure the DOM element "reader" is rendered before Html5Qrcode looks for it
         setTimeout(async () => {
             try {
-                console.log("[DEBUG] Initializing Html5Qrcode...");
                 const html5QrCode = new Html5Qrcode("reader");
                 scannerRef.current = html5QrCode;
-
                 const devices = await Html5Qrcode.getCameras();
-                console.log("[DEBUG] Available Cameras:", devices);
-
-                if (!devices || devices.length === 0) {
-                    throw new Error("No camera found on this device.");
+                
+                if (devices && devices.length > 0) {
+                    const backCam = devices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("rear"));
+                    await html5QrCode.start(
+                        backCam ? backCam.id : devices[0].id,
+                        { fps: 15, qrbox: { width: 250, height: 150 }, aspectRatio: 1.777 },
+                        (text) => handleScanSuccess(text)
+                    );
                 }
-
-                // Prefer back camera
-                let cameraId = devices[0].id;
-                const backCam = devices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("rear"));
-                if (backCam) {
-                    cameraId = backCam.id;
-                    console.log("[DEBUG] Selected Back Camera:", backCam.label);
-                }
-
-                await html5QrCode.start(
-                    cameraId,
-                    {
-                        fps: 15,
-                        qrbox: { width: 250, height: 150 },
-                        aspectRatio: 1.777,
-                    },
-                    (decodedText) => {
-                        console.log("[DEBUG] Camera Decode Success:", decodedText);
-                        handleScanSuccess(decodedText);
-                    },
-                    (errorMessage) => {
-                        // This fires for every frame that doesn't have a QR code. 
-                        // Keep it empty to avoid log flooding.
-                    }
-                );
-                console.log("[DEBUG] Camera Started Successfully");
-
             } catch (err) {
-                console.error("[DEBUG] Camera Start Error:", err);
                 toast.error("Camera failed: " + err.message);
                 setIsScanning(false);
             }
-        }, 500);
+        }, 300);
     };
-
-    useEffect(() => {
-        return () => {
-            if (scannerRef.current) {
-                console.log("[DEBUG] Component Unmounting: Cleaning up scanner...");
-                scannerRef.current.stop().catch(() => { });
-            }
-        };
-    }, []);
 
     const handleExport = () => {
         if (orders.length === 0) return toast.error("No data to export");
-        console.log("[DEBUG] Exporting CSV for", orders.length, "orders");
-        const headers = ["Order Number", "Status", "Customer", "Date"];
+        const headers = ["Order Number", "Status", "Consignee", "Date"];
         const csv = [headers, ...orders.map(o => [o.order_number, o.status, o.consignee?.name, o.updated_at])].map(r => r.join(",")).join("\n");
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Scanned_Report_${filters.date}.csv`;
+        a.download = `Report_${filters.date}.csv`;
         a.click();
     };
 
     return (
         <div className="space-y-6 p-4 lg:p-6 bg-dashboard-bg min-h-screen">
-            {/* HIDDEN INPUT FOR USB HANDHELD SCANNERS */}
+            {/* HIDDEN INPUT FOR USB SCANNERS */}
             <input
                 ref={inputRef}
                 type="text"
-                className="opacity-0 absolute pointer-events-none top-0 left-0"
+                className="opacity-0 absolute pointer-events-none"
                 onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                        console.log("[DEBUG] USB Scanner Input:", e.target.value);
                         handleScanSuccess(e.target.value);
                         e.target.value = ""; 
                     }
@@ -477,58 +238,50 @@ export default function ScannedOrders() {
                         <Scan className="text-primary" /> Speed Scanner
                     </h1>
                     <p className="text-xs text-text-muted mt-1 uppercase tracking-wider">
-                        Capture Barcodes via Camera or USB Handheld
+                        Camera or USB Handheld Mode
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-card-bg border border-border-subtle rounded-lg text-[10px] font-bold">
                         <MapPin size={14} className={location.lat ? "text-green-500" : "text-red-500"} />
-                        <span className="text-text-main">
-                            {location.lat ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "GPS WAITING..."}
+                        <span className="text-text-main font-mono">
+                            {location.lat ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "WAITING GPS..."}
                         </span>
                     </div>
                     <Button
                         onClick={toggleScanner}
-                        className={`${isScanning ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-primary/90"} text-black font-bold h-11 px-6 rounded-xl transition-all shadow-lg flex items-center gap-2`}
+                        className={`${isScanning ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-primary/90"} text-black font-bold h-11 px-6 rounded-xl shadow-lg flex items-center gap-2`}
                     >
-                        {isScanning ? <><StopCircle size={20} /> Stop Camera</> : <><Maximize size={20} /> Start Camera</>}
+                        {isScanning ? <><StopCircle size={20} /> Stop</> : <><Maximize size={20} /> Start Camera</>}
                     </Button>
                 </div>
             </div>
 
-            {/* Active Camera UI */}
             {isScanning && (
-                <Card className="border-2 border-primary border-dashed bg-black overflow-hidden relative">
-                    <CardContent className="p-0 flex flex-col items-center">
-                        {/* THE ID "reader" IS CRITICAL FOR HTML5-QRCODE */}
-                        <div id="reader" className="w-full min-h-[350px] bg-black"></div>
-                        <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
-                            <span className="bg-primary/90 text-black px-4 py-1 rounded-full text-xs font-bold animate-pulse">
-                                CAMERA SCANNER ACTIVE
-                            </span>
-                        </div>
+                <Card className="border-2 border-primary border-dashed bg-black overflow-hidden relative max-w-2xl mx-auto">
+                    <CardContent className="p-0">
+                        <div id="reader" className="w-full min-h-[300px]"></div>
                     </CardContent>
                 </Card>
             )}
 
-            {/* Listing and Filters */}
             <Card className="bg-card-bg border-border-subtle shadow-md overflow-hidden">
                 <CardContent className="p-0">
                     <div className="p-4 bg-dashboard-bg/50 border-b border-border-subtle grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Filter Date</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase">Filter Date</label>
                             <input
                                 type="date"
-                                className="w-full bg-card-bg border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-main focus:ring-2 focus:ring-primary outline-none"
+                                className="w-full bg-card-bg border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-main"
                                 value={filters.date}
                                 onChange={(e) => setFilters({ ...filters, date: e.target.value, page: 1 })}
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Target Status</label>
+                            <label className="text-[10px] font-bold text-text-muted uppercase">Target Status</label>
                             <select
-                                className="w-full bg-card-bg border border-border-subtle rounded-lg px-3 py-2.5 text-xs text-text-main focus:ring-2 focus:ring-primary outline-none appearance-none"
+                                className="w-full bg-card-bg border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-main"
                                 value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
                             >
@@ -538,28 +291,27 @@ export default function ScannedOrders() {
                             </select>
                         </div>
                         <div className="flex gap-2">
-                            <Button onClick={loadScannedOrders} className="flex-1 bg-white/5 hover:bg-white/10 text-text-main text-xs font-bold h-10 border border-border-subtle">
+                            <Button onClick={loadScannedOrders} className="flex-1 bg-white/5 text-text-main text-xs font-bold h-9 border border-border-subtle">
                                 <RotateCcw size={14} className="mr-2" /> Refresh
                             </Button>
-                            <Button onClick={handleExport} className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold h-10 border border-primary/20">
+                            <Button onClick={handleExport} className="flex-1 bg-primary/10 text-primary text-xs font-bold h-9 border border-primary/20">
                                 <Download size={14} className="mr-2" /> Export
                             </Button>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto relative min-h-[400px]">
+                    <div className="overflow-x-auto relative min-h-[300px]">
                         {loading && (
                             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-20">
-                                <Loader2 className="animate-spin text-primary" size={40} />
+                                <Loader2 className="animate-spin text-primary" size={32} />
                             </div>
                         )}
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-dashboard-bg/80 text-text-muted text-[10px] font-black uppercase tracking-tighter border-b border-border-subtle">
+                                <tr className="bg-dashboard-bg/80 text-text-muted text-[10px] font-black uppercase tracking-widest border-b border-border-subtle">
                                     <th className="px-6 py-4">Order Details</th>
                                     <th className="px-6 py-4">Consignee</th>
-                                    <th className="px-6 py-4">Box Info</th>
-                                    <th className="px-6 py-4">Weight</th>
+                                    <th className="px-6 py-4">Weight/Boxes</th>
                                     <th className="px-6 py-4">Status</th>
                                     <th className="px-6 py-4">Time</th>
                                 </tr>
@@ -567,25 +319,16 @@ export default function ScannedOrders() {
                             <tbody className="divide-y divide-border-subtle">
                                 {orders.length > 0 ? (
                                     orders.map((order) => (
-                                        <tr key={order.id} className="hover:bg-primary/5 transition-all group">
+                                        <tr key={order.id} className="hover:bg-primary/5 transition-colors group">
                                             <td className="px-6 py-4">
-                                                <div className="text-sm font-black text-text-main group-hover:text-primary transition-colors">{order.order_number}</div>
-                                                <div className="text-[10px] text-text-muted font-bold uppercase">{order.order_type} • {order.payment_method}</div>
+                                                <div className="text-sm font-black text-text-main group-hover:text-primary">{order.order_number}</div>
+                                                <div className="text-[10px] text-text-muted font-bold uppercase">{order.order_type}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-xs font-bold text-text-main">{order.consignee?.name || "N/A"}</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                                    {order.packages?.map((pkg, i) => (
-                                                        <span key={i} className="text-[9px] bg-dashboard-bg border border-border-subtle px-1.5 py-0.5 rounded text-text-muted">
-                                                            {pkg.length_cm}x{pkg.breadth_cm}x{pkg.height_cm}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-xs font-black text-text-main">{order.total_weight_kg} <span className="text-[10px] font-normal text-text-muted">KG</span></div>
+                                                <div className="text-xs font-black text-text-main">{order.total_weight_kg} KG</div>
                                                 <div className="text-[10px] text-primary font-bold">{order.total_boxes} Box(es)</div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -600,13 +343,10 @@ export default function ScannedOrders() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-32 text-center">
-                                            <div className="flex flex-col items-center gap-4 opacity-40">
-                                                <PackageSearch size={64} className="text-text-muted" />
-                                                <div className="space-y-1">
-                                                    <p className="text-xl font-bold text-text-main">No Scanned Items</p>
-                                                    <p className="text-xs uppercase tracking-widest">USB Scanner ready or use Start Camera</p>
-                                                </div>
+                                        <td colSpan={5} className="px-6 py-20 text-center">
+                                            <div className="flex flex-col items-center gap-3 opacity-40">
+                                                <PackageSearch size={48} className="text-text-muted" />
+                                                <p className="text-sm font-bold text-text-main">No Scanned Items Today</p>
                                             </div>
                                         </td>
                                     </tr>
