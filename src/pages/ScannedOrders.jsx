@@ -15,20 +15,17 @@ import {
 import Pagination from "../components/ui/Pagination";
 
 export default function ScannedOrders() {
-    // Data States
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [scanLoading, setScanLoading] = useState(false);
     
-    // UI States
     const [isScanning, setIsScanning] = useState(false);
     const [location, setLocation] = useState({ lat: null, lng: null });
     const [pagination, setPagination] = useState({ page: 1, total: 0, total_pages: 1 });
 
-    // Refs
     const scannerRef = useRef(null);
     const inputRef = useRef(null);
-    const scanCooldownRef = useRef({}); // Prevents duplicate scans of same code in short window
+    const scanCooldownRef = useRef({}); 
 
     const [filters, setFilters] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -37,7 +34,6 @@ export default function ScannedOrders() {
         limit: 10
     });
 
-    // 1. Geolocation Logic
     const getGeoLocation = useCallback(() => {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
@@ -61,7 +57,6 @@ export default function ScannedOrders() {
         getGeoLocation();
     }, [getGeoLocation]);
 
-    // 2. Load Table Data
     const loadScannedOrders = useCallback(async () => {
         setLoading(true);
         try {
@@ -84,7 +79,6 @@ export default function ScannedOrders() {
         loadScannedOrders();
     }, [loadScannedOrders]);
 
-    // 3. Auto-focus for Handheld USB Scanners
     useEffect(() => {
         const focusInput = () => {
             if (!isScanning && inputRef.current) {
@@ -96,11 +90,9 @@ export default function ScannedOrders() {
         return () => window.removeEventListener("click", focusInput);
     }, [isScanning]);
 
-    // 4. Unified Scan Process Logic
     const handleScanSuccess = async (decodedText) => {
         if (!decodedText || scanLoading) return;
 
-        // Clean Barcode Logic
         let orderNumber = decodedText;
 
         // Extract ID if URL is provided
@@ -109,13 +101,11 @@ export default function ScannedOrders() {
             orderNumber = parts[parts.length - 1];
         }
 
-        // Handle JSON cases
         try {
             const parsed = JSON.parse(orderNumber);
             if (parsed?.order_number) orderNumber = parsed.order_number;
         } catch (e) {}
 
-        // Remove whitespace and quotes
         orderNumber = String(orderNumber).replace(/["\n\r\t\s+]/g, "").trim();
 
         if (!orderNumber) {
@@ -123,14 +113,12 @@ export default function ScannedOrders() {
             return;
         }
 
-        // Duplicate Check (3 second cooldown)
         const now = Date.now();
         if (scanCooldownRef.current[orderNumber] && now - scanCooldownRef.current[orderNumber] < 3000) {
             return;
         }
         scanCooldownRef.current[orderNumber] = now;
 
-        // GPS Check
         if (!location.lat || !location.lng) {
             toast.error("Waiting for GPS location...");
             getGeoLocation();
@@ -141,14 +129,12 @@ export default function ScannedOrders() {
         const toastId = toast.loading(`Processing ${orderNumber}...`);
 
         try {
-            // API CALL: POST /orders/get-pincode/${orderNumber} with {lat, lng} body
             const res = await getOrderPincodeApi(
                 orderNumber,
                 location.lat,
                 location.lng
             );
 
-            // Audio Feedback
             try {
                 new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg").play();
             } catch (e) {}
@@ -156,7 +142,6 @@ export default function ScannedOrders() {
 
             toast.success(res?.message || `Order ${orderNumber} scanned`, { id: toastId });
 
-            // Refresh List
             await loadScannedOrders();
 
         } catch (error) {
@@ -171,7 +156,6 @@ export default function ScannedOrders() {
         }
     };
 
-    // 5. Camera Toggle Logic
     const toggleScanner = async () => {
         if (isScanning) {
             if (scannerRef.current) {
@@ -218,7 +202,6 @@ export default function ScannedOrders() {
 
     return (
         <div className="space-y-6 p-4 lg:p-6 bg-dashboard-bg min-h-screen">
-            {/* HIDDEN INPUT FOR USB SCANNERS */}
             <input
                 ref={inputRef}
                 type="text"
