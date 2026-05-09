@@ -11,7 +11,8 @@ import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchProfile } from "../../redux/profileSlice";
-import { bulkUploadOrders, resetOrderState } from "../../redux/bulkorderSlice";
+import  bulkUploadOrders  from "../../redux/bulkOrderSlice";
+import { resetOrderState } from "../../redux/bulkOrderSlice";
 import { fetchPickupAddressesApi } from "../../services/apiCalls";
 import { toast } from "react-hot-toast";
 
