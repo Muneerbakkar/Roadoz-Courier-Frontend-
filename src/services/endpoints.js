@@ -20,11 +20,7 @@ export const ENDPOINTS = {
   TODAY_STATUS: "/orders/orders/today-status",
   ACTIVITY_LOGS: "/activity-logs",
   BULK_ORDER_UPLOAD: "/orders/bulk",
-
-
-
-
-
-
+  NOTIFICATIONS_WS: "/websocket/ws/notifications",
+  READ_NOTIFICATION: (id) => `/notifications/${id}/read`,
 
 };
