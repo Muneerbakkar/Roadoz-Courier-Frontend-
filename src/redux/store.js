@@ -11,6 +11,8 @@ import remittanceReducer from "./remittanceSlice";
 import invoiceReducer from "./invoiceSlice";
 import consigneeReducer from "./consigneeSlice";
 import activityLogReducer from "./activityLogSlice";
+import warehouseReducer from "./warehouseSlice";
+import reviewReducer from "./reviewSlice";
 import bulkOrderReducer from "./bulkOrderSlice";
 import notificationReducer from "./notificationSlice";
 export const store = configureStore({
@@ -28,7 +30,7 @@ export const store = configureStore({
     invoices: invoiceReducer,
     activityLogs: activityLogReducer,
     bulkOrders: bulkOrderReducer,
-    notifications: notificationReducer,
+    warehouse: warehouseReducer,
+    review: reviewReducer,
   },
 });
-
