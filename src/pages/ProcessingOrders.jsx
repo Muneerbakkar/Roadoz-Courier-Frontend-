@@ -24,7 +24,7 @@ import { cn } from "../lib/utils";
 import Pagination from "../components/ui/Pagination";
 import { Link, useNavigate } from "react-router-dom";
 import { downloadInvoiceExcel } from "../lib/invoiceExcel";
-import { generateInvoicePDF } from "../lib/invoiceGenerator";
+
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -39,6 +39,9 @@ import OrderDetailsModal from "../components/modals/OrderDetailsModal";
 import EditWeightModal from "../components/modals/EditWeightModal";
 import ChangePickupAddressModal from "../components/modals/ChangePickupAddressModal";
 import toast from "react-hot-toast";
+import { generateInvoicePDF } from "../lib/generateInvoicePDf";
+import { mapOrderToInvoice } from "../lib/invoiceMapper";
+import { generateShippingLabel } from "../lib/generateShippingLabel";
 
 export function ProcessingOrders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -547,7 +550,20 @@ export function ProcessingOrders() {
                 </>
               ) : (
                 <>
-                  <Button className="bg-primary text-black hover:bg-primary/90 text-xs font-bold gap-2 h-9">
+                  <Button
+                    className="bg-primary text-black hover:bg-primary/90 text-xs font-bold gap-2 h-9"
+                    onClick={() => {
+                      if (selectedOrders.length === 0) {
+                        return toast.error("Please select at least one order");
+                      }
+
+                      const selectedOrdersData = orders.filter((o) =>
+                        selectedOrders.includes(o.id),
+                      );
+
+                      generateShippingLabel(selectedOrdersData);
+                    }}
+                  >
                     <Tag size={16} /> Labels
                   </Button>
                   {activeTab === "Manifested" && (
@@ -610,7 +626,26 @@ export function ProcessingOrders() {
                   </Button>
                   <Button
                     className="bg-primary text-black hover:bg-primary/90 text-xs font-bold gap-2 h-9"
-                    onClick={() => generateInvoicePDF(orders[0])}
+                    onClick={() => {
+                      if (selectedOrders.length === 0) {
+                        return toast.error("Please select at least one order");
+                      }
+
+                      const selectedOrderData = orders.find(
+                        (o) => o.id === selectedOrders[0],
+                      );
+
+                      if (!selectedOrderData) {
+                        return toast.error("Order not found");
+                      }
+
+                      const invoiceData = mapOrderToInvoice(
+                        selectedOrderData,
+                        formatDate,
+                      );
+
+                      generateInvoicePDF(invoiceData);
+                    }}
                   >
                     <FileText size={16} /> Invoices
                   </Button>
